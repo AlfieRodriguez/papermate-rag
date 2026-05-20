@@ -103,21 +103,39 @@ Local embedding support can be added later as an optional feature.
 
 ## Testing Rules
 
-For a single module task, first run the relevant test file.
+The preferred test commands are:
+
+```powershell
+python -m pytest tests/test_xxx.py
+python -m pytest
+
+Do not use plain pytest.
+
+The user usually runs tests manually in Windows PowerShell with the papermate conda environment activated:
+
+conda activate papermate
+cd D:\Development\papermate-rag
+python -m pytest
+
+Codex may run in a shell that does not share the user's Windows conda PATH.
+
+If this Codex environment cannot find python, py, conda, or pytest, do not modify the environment and do not install packages unless explicitly asked.
+
+In that case:
+
+State clearly that tests could not be run because the test runner is unavailable in this shell.
+Provide the exact commands the user should run manually in PowerShell.
+Do not claim tests passed.
+Continue to summarize the changed files and assumptions.
+
+For a single module task, ask the user to run the relevant test file first, then the full suite.
 
 Example:
 
-```powershell
-python -m pytest tests/test_pdf_loader.py
-```
-
-Then run all tests:
-
-```powershell
+python -m pytest tests/test_chunker.py
 python -m pytest
-```
 
-A task is not complete unless the relevant tests pass.
+A task is complete only after the user confirms the relevant tests pass.
 
 ## Git / Review Rules
 
