@@ -7,22 +7,29 @@ from pathlib import Path
 from typing import Any
 
 import streamlit as st
+from dotenv import load_dotenv
 
 from papermate.chains import QAChain
 from papermate.chunking import TextChunker
-from papermate.embeddings import OpenAIEmbedder
+from papermate.embeddings import GeminiEmbedder, OpenAIEmbedder
 from papermate.ingestion.pdf_loader import PDFLoader
-from papermate.llm import OpenAILLM
+from papermate.llm import GeminiLLM, OpenAILLM
 from papermate.retrieval import Retriever
 from papermate.schemas import Citation, RetrievedChunk
 from papermate.services import PaperService
 from papermate.vectorstores import ChromaVectorStore
 
+load_dotenv()
+
 UPLOAD_DIR = Path("data/raw/papers")
 CHROMA_DIR = Path("data/chroma")
 DEFAULT_TOP_K = 5
-DEFAULT_LLM_MODEL = "gpt-4o-mini"
-DEFAULT_EMBEDDING_MODEL = "text-embedding-3-small"
+PROVIDER_GEMINI = "gemini"
+PROVIDER_OPENAI = "openai"
+DEFAULT_OPENAI_LLM_MODEL = "gpt-4o-mini"
+DEFAULT_OPENAI_EMBEDDING_MODEL = "text-embedding-3-small"
+DEFAULT_GEMINI_LLM_MODEL = "gemini-3.5-flash"
+DEFAULT_GEMINI_EMBEDDING_MODEL = "gemini-embedding-001"
 SAMPLE_QUESTIONS = [
     "What is the main contribution of this paper?",
     "What dataset does the paper use?",
@@ -33,20 +40,35 @@ SAMPLE_QUESTIONS = [
 
 def build_service(
     top_k: int = DEFAULT_TOP_K,
-    llm_model: str = DEFAULT_LLM_MODEL,
-    embedding_model: str = DEFAULT_EMBEDDING_MODEL,
+    provider: str = PROVIDER_GEMINI,
+    llm_model: str | None = None,
+    embedding_model: str | None = None,
 ) -> PaperService:
     """Build the PaperMate service graph for the Streamlit app."""
 
+    normalized_provider = normalize_provider(provider)
+    if normalized_provider == PROVIDER_GEMINI:
+        effective_llm_model = llm_model or default_gemini_model()
+        effective_embedding_model = embedding_model or default_gemini_embedding_model()
+        embedder = GeminiEmbedder(model=effective_embedding_model)
+        llm = GeminiLLM(model=effective_llm_model)
+        persist_directory = CHROMA_DIR / PROVIDER_GEMINI
+    elif normalized_provider == PROVIDER_OPENAI:
+        effective_llm_model = llm_model or DEFAULT_OPENAI_LLM_MODEL
+        effective_embedding_model = embedding_model or DEFAULT_OPENAI_EMBEDDING_MODEL
+        embedder = OpenAIEmbedder(model=effective_embedding_model)
+        llm = OpenAILLM(model=effective_llm_model)
+        persist_directory = CHROMA_DIR / PROVIDER_OPENAI
+    else:
+        raise ValueError(f"unsupported provider: {provider}")
+
     UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     CHROMA_DIR.mkdir(parents=True, exist_ok=True)
-
+    persist_directory.mkdir(parents=True, exist_ok=True)
     pdf_loader = PDFLoader()
     chunker = TextChunker()
-    embedder = OpenAIEmbedder(model=embedding_model)
-    vector_store = ChromaVectorStore(persist_directory=str(CHROMA_DIR))
+    vector_store = ChromaVectorStore(persist_directory=str(persist_directory))
     retriever = Retriever(embedder=embedder, vector_store=vector_store, top_k=top_k)
-    llm = OpenAILLM(model=llm_model)
     qa_chain = QAChain(retriever=retriever, llm=llm, top_k=top_k)
     return PaperService(
         pdf_loader=pdf_loader,
@@ -55,6 +77,45 @@ def build_service(
         vector_store=vector_store,
         qa_chain=qa_chain,
     )
+
+
+def normalize_provider(provider: str) -> str:
+    """Normalize a provider label from UI or config."""
+
+    return provider.strip().lower()
+
+
+def default_provider() -> str:
+    """Choose the default provider from available API keys."""
+
+    if os.getenv("GEMINI_API_KEY"):
+        return PROVIDER_GEMINI
+    if os.getenv("OPENAI_API_KEY"):
+        return PROVIDER_OPENAI
+    return PROVIDER_GEMINI
+
+
+def provider_display_name(provider: str) -> str:
+    """Return the display name for a provider."""
+
+    normalized_provider = normalize_provider(provider)
+    if normalized_provider == PROVIDER_GEMINI:
+        return "Gemini"
+    if normalized_provider == PROVIDER_OPENAI:
+        return "OpenAI"
+    return provider
+
+
+def default_gemini_model() -> str:
+    """Return Gemini LLM model default from the environment."""
+
+    return os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_LLM_MODEL)
+
+
+def default_gemini_embedding_model() -> str:
+    """Return Gemini embedding model default from the environment."""
+
+    return os.getenv("GEMINI_EMBEDDING_MODEL", DEFAULT_GEMINI_EMBEDDING_MODEL)
 
 
 def build_doc_upload_path(file_name: str, upload_dir: Path = UPLOAD_DIR) -> Path:
@@ -120,7 +181,7 @@ def apply_styles() -> None:
         .pm-status-row {
             display: grid;
             gap: 0.75rem;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
+            grid-template-columns: repeat(4, minmax(0, 1fr));
             margin: 1rem 0 1.5rem;
         }
         .pm-status-card {
@@ -194,17 +255,24 @@ def init_session_state() -> None:
     st.session_state.setdefault("service_config", None)
 
 
-def get_service(top_k: int, llm_model: str, embedding_model: str) -> PaperService:
+def get_service(
+    top_k: int,
+    provider: str,
+    llm_model: str,
+    embedding_model: str,
+) -> PaperService:
     """Return a cached service, rebuilding when settings change."""
 
     config = {
         "top_k": top_k,
+        "provider": normalize_provider(provider),
         "llm_model": llm_model,
         "embedding_model": embedding_model,
     }
     if st.session_state.service is None or st.session_state.service_config != config:
         st.session_state.service = build_service(
             top_k=top_k,
+            provider=provider,
             llm_model=llm_model,
             embedding_model=embedding_model,
         )
@@ -240,7 +308,7 @@ def render_citations(
                 st.markdown(chunk_preview(retrieved.chunk.text))
 
 
-def render_status_row(indexed_count: int, top_k: int) -> None:
+def render_status_row(indexed_count: int, top_k: int, provider: str) -> None:
     """Render compact app status cards."""
 
     st.markdown(
@@ -249,6 +317,10 @@ def render_status_row(indexed_count: int, top_k: int) -> None:
           <div class="pm-status-card">
             <div class="pm-status-label">Indexed papers</div>
             <div class="pm-status-value">{indexed_count}</div>
+          </div>
+          <div class="pm-status-card">
+            <div class="pm-status-label">Provider</div>
+            <div class="pm-status-value">{provider_display_name(provider)}</div>
           </div>
           <div class="pm-status-card">
             <div class="pm-status-label">Top K</div>
@@ -317,9 +389,6 @@ def main() -> None:
         st.markdown("## PaperMate RAG")
         st.caption("Ask questions grounded in academic papers.")
 
-        if not os.getenv("OPENAI_API_KEY"):
-            st.warning("Set OPENAI_API_KEY before real embedding and answering.")
-
         st.markdown("### PDF upload")
         uploaded_file = st.file_uploader("Upload a PDF", type=["pdf"])
         index_clicked = st.button("Index paper", use_container_width=True)
@@ -332,17 +401,39 @@ def main() -> None:
             st.caption("No papers indexed yet.")
 
         with st.expander("Advanced settings"):
+            provider_options = ["Gemini", "OpenAI"]
+            default_provider_name = provider_display_name(default_provider())
+            provider = st.selectbox(
+                "Provider",
+                provider_options,
+                index=provider_options.index(default_provider_name),
+            )
+            normalized_provider = normalize_provider(provider)
+            if normalized_provider == PROVIDER_GEMINI:
+                llm_default = default_gemini_model()
+                embedding_default = default_gemini_embedding_model()
+                llm_label = "Gemini model"
+                embedding_label = "Gemini embedding model"
+                if not os.getenv("GEMINI_API_KEY"):
+                    st.warning("Set GEMINI_API_KEY before real Gemini answering.")
+            else:
+                llm_default = DEFAULT_OPENAI_LLM_MODEL
+                embedding_default = DEFAULT_OPENAI_EMBEDDING_MODEL
+                llm_label = "OpenAI model"
+                embedding_label = "OpenAI embedding model"
+                if not os.getenv("OPENAI_API_KEY"):
+                    st.warning("Set OPENAI_API_KEY before real OpenAI answering.")
+
             top_k = st.slider("top_k", min_value=1, max_value=10, value=DEFAULT_TOP_K)
-            llm_model = st.text_input("Model name", value=DEFAULT_LLM_MODEL)
+            llm_model = st.text_input(llm_label, value=llm_default)
             embedding_model = st.text_input(
-                "Embedding model",
-                value=DEFAULT_EMBEDDING_MODEL,
+                embedding_label,
+                value=embedding_default,
             )
             st.caption("Settings changes rebuild the service automatically.")
-            st.caption("OPENAI_API_KEY is required for real embedding and answering.")
 
     try:
-        service = get_service(top_k, llm_model, embedding_model)
+        service = get_service(top_k, provider, llm_model, embedding_model)
     except Exception as error:
         st.error(f"Could not initialize PaperMate: {error}")
         return
@@ -364,7 +455,7 @@ def main() -> None:
         '<div class="pm-subtitle">Ask questions, get answers backed by paper evidence.</div>',
         unsafe_allow_html=True,
     )
-    render_status_row(len(st.session_state.indexed_doc_ids), top_k)
+    render_status_row(len(st.session_state.indexed_doc_ids), top_k, provider)
 
     with st.container():
         if st.session_state.messages:

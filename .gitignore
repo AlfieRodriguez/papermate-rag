@@ -11,3 +11,5 @@ data/processed/*
 !data/papers/.gitkeep
 !data/processed/.gitkeep
 .review/
+data/raw/papers/*
+!data/raw/papers/.gitkeep

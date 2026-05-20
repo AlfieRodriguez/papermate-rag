@@ -16,6 +16,7 @@ dependencies = [
     "pymupdf",
     "chromadb",
     "openai",
+    "google-genai",
     "sentence-transformers",
 ]
 
