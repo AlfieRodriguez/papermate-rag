@@ -17,7 +17,6 @@ dependencies = [
     "chromadb",
     "openai",
     "google-genai",
-    "sentence-transformers",
 ]
 
 [tool.setuptools.packages.find]

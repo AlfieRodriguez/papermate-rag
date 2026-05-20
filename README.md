@@ -1,22 +1,76 @@
 # PaperMate RAG
 
-PaperMate RAG is an early scaffold for a modular retrieval-augmented generation system focused on reading and exploring academic papers.
+PaperMate RAG is a modular RAG system for asking citation-grounded questions over academic papers.
 
-## Setup
+It is designed as a lightweight MVP for academic paper reading: upload a PDF, index it, ask questions, and inspect citations tied back to retrieved paper chunks.
 
-Create and activate a virtual environment, then install the project in editable mode:
+## Key Features
+
+- PDF upload and text extraction
+- Text chunking
+- Embedding generation
+- Chroma vector search
+- Citation-grounded QA
+- Streamlit chat UI
+- Provider support: Gemini and OpenAI
+- Modular architecture and tests
+
+## Tech Stack
+
+- Python
+- Streamlit
+- ChromaDB
+- Gemini API
+- OpenAI API
+- pytest
+
+## Quick Start
+
+Activate the existing conda environment:
 
 ```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
+conda activate papermate
+```
+
+Install dependencies if needed:
+
+```powershell
 pip install -e .
 ```
 
-Copy the example environment file and add your API key:
+Create a local `.env` file:
 
 ```powershell
 Copy-Item .env.example .env
 ```
+
+Add provider credentials to `.env`:
+
+```text
+GEMINI_API_KEY=your_key
+GEMINI_MODEL=gemini-3.5-flash
+GEMINI_EMBEDDING_MODEL=gemini-embedding-001
+OPENAI_API_KEY=your_key
+OPENAI_MODEL=gpt-4o-mini
+OPENAI_EMBEDDING_MODEL=text-embedding-3-small
+```
+
+Run the Streamlit app:
+
+```powershell
+streamlit run src/papermate/ui/streamlit_app.py
+```
+
+## Demo Workflow
+
+Gemini is the recommended provider for interviews and free-tier demos. OpenAI is also supported when `OPENAI_API_KEY` is configured.
+
+1. Start the app.
+2. Choose the Gemini provider in Advanced settings.
+3. Upload a PDF from the sidebar.
+4. Click `Index paper`.
+5. Ask questions in the chat.
+6. Check citations under the answer.
 
 ## Run Tests
 
@@ -24,34 +78,9 @@ Copy-Item .env.example .env
 python -m pytest
 ```
 
-## Run the Streamlit app
+## Notes
 
-Set a provider API key before using real embedding and answering.
-
-```powershell
-conda activate papermate
-cd D:\Development\papermate-rag
-streamlit run src/papermate/ui/streamlit_app.py
-```
-
-Upload a PDF from the sidebar, index it, then ask questions in the chat.
-
-## Gemini provider
-
-Create a Gemini API key in Google AI Studio, then add this to `.env`:
-
-```text
-GEMINI_API_KEY=your_key
-GEMINI_MODEL=gemini-3.5-flash
-GEMINI_EMBEDDING_MODEL=gemini-embedding-001
-```
-
-Run the app:
-
-```powershell
-streamlit run src/papermate/ui/streamlit_app.py
-```
-
-Choose Gemini in Advanced settings. Upload a PDF, index it, and ask questions.
-
-The OpenAI provider is still available if `OPENAI_API_KEY` is configured. The Gemini free tier is rate-limited.
+- Do not commit `.env`.
+- Uploaded PDFs and Chroma data are local runtime artifacts.
+- Gemini free tier may be rate-limited.
+- OpenAI API billing is separate from a ChatGPT subscription.
