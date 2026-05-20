@@ -23,6 +23,12 @@ CHROMA_DIR = Path("data/chroma")
 DEFAULT_TOP_K = 5
 DEFAULT_LLM_MODEL = "gpt-4o-mini"
 DEFAULT_EMBEDDING_MODEL = "text-embedding-3-small"
+SAMPLE_QUESTIONS = [
+    "What is the main contribution of this paper?",
+    "What dataset does the paper use?",
+    "How does the proposed method work?",
+    "What are the limitations of this study?",
+]
 
 
 def build_service(
@@ -136,6 +142,43 @@ def apply_styles() -> None:
         .pm-muted {
             color: #64748b;
         }
+        .pm-empty-state {
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 1.25rem;
+            background: #ffffff;
+            margin: 1rem 0 1.5rem;
+        }
+        .pm-empty-title {
+            color: #0f172a;
+            font-size: 1.15rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
+        .pm-empty-subtitle {
+            color: #64748b;
+            margin-bottom: 1rem;
+        }
+        .pm-workflow {
+            display: grid;
+            gap: 0.5rem;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            margin-bottom: 1rem;
+        }
+        .pm-workflow-step,
+        .pm-question-card {
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 0.7rem 0.75rem;
+            background: #f8fafc;
+            color: #334155;
+            font-size: 0.9rem;
+        }
+        .pm-question-grid {
+            display: grid;
+            gap: 0.5rem;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
         </style>
         """,
         unsafe_allow_html=True,
@@ -234,6 +277,35 @@ def render_messages() -> None:
                 )
 
 
+def render_empty_state() -> None:
+    """Render the first-screen empty state."""
+
+    question_cards = "\n".join(
+        f'<div class="pm-question-card">{question}</div>'
+        for question in SAMPLE_QUESTIONS
+    )
+    st.markdown(
+        f"""
+        <div class="pm-empty-state">
+          <div class="pm-empty-title">Start with a paper</div>
+          <div class="pm-empty-subtitle">
+            Upload a PDF, index it, then ask questions with citation-backed answers.
+          </div>
+          <div class="pm-workflow">
+            <div class="pm-workflow-step">Upload a PDF from the sidebar.</div>
+            <div class="pm-workflow-step">Click Index paper.</div>
+            <div class="pm-workflow-step">Ask grounded questions.</div>
+            <div class="pm-workflow-step">Check citations under answers.</div>
+          </div>
+          <div class="pm-question-grid">
+            {question_cards}
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def main() -> None:
     """Run the Streamlit app."""
 
@@ -259,15 +331,15 @@ def main() -> None:
         else:
             st.caption("No papers indexed yet.")
 
-        st.markdown("### Settings")
-        top_k = st.slider("top_k", min_value=1, max_value=10, value=DEFAULT_TOP_K)
-        llm_model = st.text_input("Model name", value=DEFAULT_LLM_MODEL)
-        embedding_model = st.text_input(
-            "Embedding model",
-            value=DEFAULT_EMBEDDING_MODEL,
-        )
-        st.caption("Settings changes rebuild the service automatically.")
-        st.caption("OPENAI_API_KEY is required for real embedding and answering.")
+        with st.expander("Advanced settings"):
+            top_k = st.slider("top_k", min_value=1, max_value=10, value=DEFAULT_TOP_K)
+            llm_model = st.text_input("Model name", value=DEFAULT_LLM_MODEL)
+            embedding_model = st.text_input(
+                "Embedding model",
+                value=DEFAULT_EMBEDDING_MODEL,
+            )
+            st.caption("Settings changes rebuild the service automatically.")
+            st.caption("OPENAI_API_KEY is required for real embedding and answering.")
 
     try:
         service = get_service(top_k, llm_model, embedding_model)
@@ -289,13 +361,16 @@ def main() -> None:
 
     st.title("PaperMate")
     st.markdown(
-        '<div class="pm-subtitle">Ask questions grounded in your papers.</div>',
+        '<div class="pm-subtitle">Ask questions, get answers backed by paper evidence.</div>',
         unsafe_allow_html=True,
     )
     render_status_row(len(st.session_state.indexed_doc_ids), top_k)
 
     with st.container():
-        render_messages()
+        if st.session_state.messages:
+            render_messages()
+        else:
+            render_empty_state()
 
     question = st.chat_input("Ask a question about your indexed papers")
     if question:

@@ -66,3 +66,8 @@ def test_chunk_preview_compacts_long_text() -> None:
     preview = streamlit_app.chunk_preview("one   two\nthree four", max_length=10)
 
     assert preview == "one two..."
+
+
+def test_sample_questions_are_available_for_empty_state() -> None:
+    assert len(streamlit_app.SAMPLE_QUESTIONS) == 4
+    assert "What is the main contribution of this paper?" in streamlit_app.SAMPLE_QUESTIONS
