@@ -208,3 +208,4 @@ The review packet must include:
    - Specific things the human reviewer should check
 
 Do not commit `.review/` files.
+Do not use ellipses (`...`) or truncated code in review packets. Include full file contents for new files.
