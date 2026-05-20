@@ -21,13 +21,17 @@ Copy-Item .env.example .env
 ## Run Tests
 
 ```powershell
-pytest
+python -m pytest
 ```
 
-## Run the App
+## Run the Streamlit app
 
-The Streamlit app package is scaffolded, but application behavior has not been implemented yet.
+Set `OPENAI_API_KEY` before using real embedding and answering.
 
 ```powershell
-streamlit run src/papermate_rag/app.py
+conda activate papermate
+cd D:\Development\papermate-rag
+streamlit run src/papermate/ui/streamlit_app.py
 ```
+
+Upload a PDF from the sidebar, index it, then ask questions in the chat.
