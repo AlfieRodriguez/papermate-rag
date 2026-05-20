@@ -10,3 +10,4 @@ data/processed/*
 !data/chroma/.gitkeep
 !data/papers/.gitkeep
 !data/processed/.gitkeep
+.review/
