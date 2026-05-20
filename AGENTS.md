@@ -162,3 +162,49 @@ When given a task:
 7. Run the requested tests.
 
 If a change requires editing a file outside the allowed list, explain why before doing it.
+
+## Review Packet Rules
+
+After each task, create a temporary review packet under:
+
+```text
+.review/
+```
+
+Example:
+
+```text
+.review/TASK_05_REVIEW.md
+```
+
+The review packet is for human review only and should not be committed.
+
+The review packet must include:
+
+1. Task Summary
+   - What was implemented
+   - What was intentionally not implemented
+
+2. Files Changed
+   - List every changed file
+   - Explain the role of each file
+
+3. Code Review Content
+   - Include the full content of every new file created in this task
+   - For modified existing files, include the relevant changed sections
+   - If a file is short, include the full file content
+
+4. Tests
+   - List exact test commands
+   - Include exact test output if tests were run
+   - If tests could not be run, clearly explain why and provide PowerShell commands for the user
+
+5. Design Notes
+   - Important design decisions
+   - Assumptions
+   - Limitations or follow-up tasks
+
+6. Review Focus
+   - Specific things the human reviewer should check
+
+Do not commit `.review/` files.
