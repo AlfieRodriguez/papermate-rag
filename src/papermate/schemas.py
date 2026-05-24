@@ -20,7 +20,7 @@ class PaperDocument(BaseModel):
     """Metadata for a paper available to the RAG system."""
 
     doc_id: str
-    title: str
+    title: str | None = None
     file_name: str
     file_path: str
     metadata: dict[str, Any] = Field(default_factory=dict)

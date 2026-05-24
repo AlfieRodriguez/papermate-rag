@@ -1,19 +1,20 @@
 # PaperMate RAG
 
-PaperMate RAG is a modular RAG system for asking citation-grounded questions over academic papers.
+PaperMate RAG is a lightweight Retrieval-Augmented Generation (RAG) system for reading academic papers.
 
-It is designed as a lightweight MVP for academic paper reading: upload a PDF, index it, ask questions, and inspect citations tied back to retrieved paper chunks.
+It allows users to upload a PDF, index its content, ask questions about the paper, and inspect citations linked to the retrieved text chunks. The project is designed as a simple MVP for academic paper reading and question answering.
 
-## Key Features
+## Features
 
 - PDF upload and text extraction
-- Text chunking
+- Text chunking for long documents
 - Embedding generation
-- Chroma vector search
-- Citation-grounded QA
-- Streamlit chat UI
-- Provider support: Gemini and OpenAI
-- Modular architecture and tests
+- Chroma-based vector search
+- Question answering with citations from retrieved chunks
+- Streamlit chat interface
+- Provider support for Gemini and OpenAI
+- Modular project structure
+- Basic tests with pytest
 
 ## Tech Stack
 
@@ -24,63 +25,117 @@ It is designed as a lightweight MVP for academic paper reading: upload a PDF, in
 - OpenAI API
 - pytest
 
+## Project Structure
+
+```text
+papermate-rag/
+├── src/
+│   └── papermate/
+│       ├── ui/
+│       ├── ingestion/
+│       ├── retrieval/
+│       ├── generation/
+│       └── config/
+├── tests/
+├── .env.example
+├── README.md
+└── pyproject.toml
+```
+
 ## Quick Start
 
-Activate the existing conda environment:
+### 1. Create and activate a conda environment
 
-```powershell
+```bash
+conda create -n papermate python=3.11
 conda activate papermate
 ```
 
-Install dependencies if needed:
+If you already have the environment, simply activate it:
 
-```powershell
+```bash
+conda activate papermate
+```
+
+### 2. Install dependencies
+
+```bash
 pip install -e .
 ```
 
-Create a local `.env` file:
+### 3. Create a local `.env` file
+
+Windows PowerShell:
 
 ```powershell
 Copy-Item .env.example .env
 ```
 
-Add provider credentials to `.env`:
+macOS / Linux:
 
-```text
-GEMINI_API_KEY=your_key
-GEMINI_MODEL=gemini-3.5-flash
+```bash
+cp .env.example .env
+```
+
+### 4. Add API credentials
+
+Edit the `.env` file and add the provider credentials you want to use.
+
+```env
+GEMINI_API_KEY=your_gemini_api_key
+GEMINI_MODEL=gemini-2.5-flash
 GEMINI_EMBEDDING_MODEL=gemini-embedding-001
-OPENAI_API_KEY=your_key
+
+OPENAI_API_KEY=your_openai_api_key
 OPENAI_MODEL=gpt-4o-mini
 OPENAI_EMBEDDING_MODEL=text-embedding-3-small
 ```
 
-Run the Streamlit app:
+You only need to configure the provider you plan to use.
 
-```powershell
+### 5. Run the Streamlit app
+
+```bash
 streamlit run src/papermate/ui/streamlit_app.py
 ```
 
 ## Demo Workflow
 
-Gemini is the recommended provider for interviews and free-tier demos. OpenAI is also supported when `OPENAI_API_KEY` is configured.
-
-1. Start the app.
-2. Choose the Gemini provider in Advanced settings.
+1. Start the Streamlit app.
+2. Select a provider in the advanced settings.
 3. Upload a PDF from the sidebar.
-4. Click `Index paper`.
+4. Click **Index paper**.
 5. Ask questions in the chat.
-6. Check citations under the answer.
+6. Check the cited chunks under the generated answer.
+
+For simple demos, Gemini is a convenient default option. OpenAI is also supported when `OPENAI_API_KEY` is configured.
 
 ## Run Tests
 
-```powershell
+```bash
 python -m pytest
 ```
 
 ## Notes
 
 - Do not commit `.env`.
-- Uploaded PDFs and Chroma data are local runtime artifacts.
-- Gemini free tier may be rate-limited.
-- OpenAI API billing is separate from a ChatGPT subscription.
+- Uploaded PDFs are local runtime artifacts.
+- Chroma vector data is stored locally.
+- API usage may be subject to provider rate limits.
+- OpenAI API usage is separate from a ChatGPT subscription.
+
+## Limitations
+
+- Scanned PDFs without selectable text may not be extracted correctly.
+- Citation quality depends on PDF text extraction and retrieval quality.
+- The system currently focuses on single-PDF reading.
+- This project is designed as a local MVP, not a production deployment.
+
+## Future Improvements
+
+- Support for multiple papers
+- Better PDF parsing for tables and figures
+- Citation preview with page numbers
+- Conversation history persistence
+- Evaluation scripts for retrieval quality
+- Deployment-ready configuration
